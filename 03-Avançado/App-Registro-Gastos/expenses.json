@@ -1,0 +1,12 @@
+[
+    {
+        "description": "Groceries",
+        "category": "Food",
+        "value": 75.0
+    },
+    {
+        "description": "New Book",
+        "category": "Entertainment",
+        "value": 32.99
+    }
+]
