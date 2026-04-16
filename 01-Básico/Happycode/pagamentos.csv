@@ -1,0 +1,11 @@
+ID;Nome;Cargo;Carga Horaria (h/mes);Salario Base (R$);Hora Extra (R$);Descontos INSS (R$);Descontos VT (R$);Beneficios (R$);Salario Liquido (R$)
+1;Ana Souza;Professora de Matematica;160;4500;300;495;270;600;4635
+2;Carlos Lima;Professor de Portugues;160;4200;150;462;252;500;4136
+3;Mariana Alves;Professora de Ciencias;200;5000;400;550;300;700;5250
+4;Joao Pereira;Professor de Historia;160;4000;0;440;240;450;3770
+5;Fernanda Rocha;Professora de Geografia;180;4700;200;517;282;650;4751
+6;Ricardo Gomes;Professor de Fisica;200;5200;350;572;312;700;5366
+7;Patricia Nunes;Professora de Ingles;160;4300;100;473;258;550;4219
+8;Eduardo Martins;Professor de Educacao Fisica;180;3900;250;429;234;500;3987
+9;Juliana Castro;Professora de Artes;160;4100;0;451;246;480;3883
+10;Lucas Ferreira;Professor de Quimica;200;5100;300;561;306;720;5253
