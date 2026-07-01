@@ -1,0 +1,514 @@
+# Biblioteca para reconhecer voz pelo microfone
+import speech_recognition as sr
+
+# Biblioteca para transformar texto em fala
+import pyttsx3
+
+# Biblioteca para trabalhar com data e hora
+import datetime
+
+# Biblioteca para pesquisar resumos na Wikipédia
+import wikipedia
+
+# Biblioteca para abrir pesquisas e vídeos no YouTube/Google
+import pywhatkit
+
+# Biblioteca para executar comandos do sistema operacional
+import os
+
+# Biblioteca para fazer requisições na internet, usada no clima
+import requests
+
+# Biblioteca para abrir sites no navegador
+import webbrowser
+
+# Biblioteca para escolher respostas aleatórias
+import random
+
+# Biblioteca para controlar teclado e mouse pelo Python
+import pyautogui
+
+# Biblioteca para criar pequenas pausas no programa
+import time
+
+# Função para transformar texto com espaço em formato de link
+from urllib.parse import quote
+
+
+# Cria o reconhecedor de voz
+audio = sr.Recognizer()
+
+# Inicializa o sistema de fala do Windows
+maquina = pyttsx3.init('sapi5')
+
+# Define a velocidade da fala
+maquina.setProperty('rate', 170)
+
+# Define o volume da fala
+maquina.setProperty('volume', 1.0)
+
+
+# Busca as vozes instaladas no computador
+voices = maquina.getProperty('voices')
+
+# Tenta selecionar uma voz em português
+for voice in voices:
+    if "brazil" in voice.name.lower() or "portuguese" in voice.name.lower():
+        maquina.setProperty('voice', voice.id)
+        break
+
+
+# Mensagem exibida no terminal
+print("Ajustando microfone para o ruído da sala... aguarde.")
+
+# Ajusta o microfone para reduzir ruídos do ambiente
+with sr.Microphone() as source:
+    audio.adjust_for_ambient_noise(source, duration=1)
+
+
+# Função responsável por fazer a Alexandria falar
+def falar(texto):
+    # Garante que o texto seja convertido para string
+    texto = str(texto)
+
+    # Mostra no terminal o que a Alexandria vai falar
+    print(f"Alexandria: {texto}")
+
+    try:
+        # Para qualquer fala anterior que possa estar presa
+        maquina.stop()
+
+        # Envia o texto para o sistema de fala
+        maquina.say(texto)
+
+        # Executa a fala
+        maquina.runAndWait()
+
+    except Exception as e:
+        # Mostra erro se a fala falhar
+        print(f"Erro na fala: {e}")
+
+
+# Função responsável por ouvir o comando do usuário
+def ouvirComando():
+    # Começa com o comando vazio
+    comando = ""
+
+    try:
+        # Abre o microfone
+        with sr.Microphone() as source:
+            print("Aguardando comando...")
+
+            # Ajusta o tempo de pausa entre palavras
+            audio.pause_threshold = 0.8
+
+            # Sensibilidade do microfone
+            audio.energy_threshold = 300
+
+            # Escuta o áudio do usuário
+            # timeout=5 evita que o programa fique travado esperando fala
+            # phrase_time_limit=5 limita a fala em até 5 segundos
+            voz = audio.listen(source, timeout=5, phrase_time_limit=5)
+
+            # Envia o áudio para o Google reconhecer em português do Brasil
+            comando = audio.recognize_google(voz, language='pt-BR')
+
+            # Converte tudo para letras minúsculas
+            comando = comando.lower()
+
+            # Mostra no terminal o que foi entendido
+            print(f"Você disse: {comando}")
+
+            # Só executa se o usuário falar o nome Alexandria
+            if "alexandria" in comando:
+                # Remove a palavra Alexandria do comando
+                comando = comando.replace("alexandria", "").strip()
+
+                # Lista de respostas possíveis
+                respostas_ativacao = [
+                    "Sim?",
+                    "Pois não?",
+                    "Estou ouvindo.",
+                    "Oi!"
+                ]
+
+                # Fala uma resposta aleatória
+                falar(random.choice(respostas_ativacao))
+
+                # Retorna o comando sem a palavra Alexandria
+                return comando
+
+    except sr.WaitTimeoutError:
+        # Se ninguém falar nada dentro do tempo, apenas ignora
+        pass
+
+    except sr.UnknownValueError:
+        # Se não entender a fala, apenas ignora
+        pass
+
+    except Exception as e:
+        # Mostra outros erros no terminal
+        print(f"Erro ao ouvir: {e}")
+
+    # Retorna vazio se não houver comando válido
+    return ""
+
+
+# Função para buscar o clima de uma cidade
+def buscar_clima(cidade):
+    # Converte o nome da cidade para formato de URL
+    cidade_codificada = quote(cidade)
+
+    # Chave da API do OpenWeather
+    # Troque pelo seu código real
+    api_key = "SUA_CHAVE_API_AQUI"
+
+    # Monta o link da API
+    link = (
+        f"https://api.openweathermap.org/data/2.5/weather?"
+        f"q={cidade_codificada}"
+        f"&appid={api_key}"
+        f"&lang=pt_br"
+        f"&units=metric"
+    )
+
+    try:
+        # Faz a requisição para o site do clima
+        requisicao = requests.get(link)
+
+        # Converte a resposta para formato JSON
+        dados = requisicao.json()
+
+        # Verifica se a cidade foi encontrada
+        if str(dados.get('cod')) == "200":
+            # Pega a temperatura
+            temp = dados['main']['temp']
+
+            # Pega a descrição do clima
+            desc = dados['weather'][0]['description']
+
+            # Retorna a frase pronta
+            return (
+                f"Em {cidade}, faz "
+                f"{temp:.1f} graus "
+                f"com {desc}."
+            )
+
+    except Exception as e:
+        # Mostra erro no terminal
+        print(f"Erro no clima: {e}")
+
+        # Retorna mensagem de erro
+        return "Não consegui checar o clima agora."
+
+    # Se a cidade não for encontrada
+    return "Cidade não encontrada."
+
+
+# Função para pesquisar vídeos no YouTube usando o navegador já aberto
+def pesquisar_video_youtube(video):
+    # Fala o que vai pesquisar
+    falar(f"Pesquisando {video} no YouTube.")
+
+    # Seleciona a barra de endereço do navegador
+    pyautogui.hotkey("ctrl", "l")
+    time.sleep(0.5)
+
+    # Cria o link de pesquisa do YouTube
+    url = f"https://www.youtube.com/results?search_query={quote(video)}"
+
+    # Digita o link na barra de endereço
+    pyautogui.write(url)
+    time.sleep(0.5)
+
+    # Aperta Enter para abrir a pesquisa
+    pyautogui.press("enter")
+
+
+# Função principal que executa os comandos
+def executar_alexandria():
+    # Chama a função que escuta o usuário
+    comando = ouvirComando()
+
+    # Se nenhum comando for recebido, encerra esta rodada
+    if comando == "":
+        return
+
+    # Mostra o comando reconhecido no terminal
+    print(f"Comando recebido: {comando}")
+
+    # -------------------------
+    # HORAS
+    # -------------------------
+    if "horas" in comando or "horário" in comando or "horario" in comando:
+        # Pega a hora atual do computador
+        hora = datetime.datetime.now().strftime("%H:%M")
+
+        # Fala a hora
+        falar(f"Agora são {hora}")
+
+    # -------------------------
+    # WIKIPÉDIA
+    # -------------------------
+    elif "pesquisar" in comando and "youtube" not in comando:
+        # Remove a palavra pesquisar
+        procurar = comando.replace("pesquisar", "").strip()
+
+        # Verifica se o usuário falou o que quer pesquisar
+        if procurar == "":
+            falar("O que você quer pesquisar?")
+            return
+
+        # Fala que está buscando
+        falar(f"Buscando {procurar}")
+
+        # Define a Wikipédia em português
+        wikipedia.set_lang("pt")
+
+        try:
+            # Busca um resumo com uma frase
+            resultado = wikipedia.summary(procurar, sentences=1)
+
+            # Fala o resultado
+            falar(resultado)
+
+        except Exception:
+            # Caso não encontre
+            falar("Não consegui encontrar esse assunto na Wikipédia.")
+
+    # -------------------------
+    # CLIMA
+    # -------------------------
+    elif "tempo em" in comando or "clima em" in comando:
+        # Remove as palavras usadas no comando
+        cidade = (
+            comando.replace("tempo em", "")
+                   .replace("clima em", "")
+                   .strip()
+        )
+
+        # Verifica se o usuário falou a cidade
+        if cidade == "":
+            falar("De qual cidade você quer saber o clima?")
+            return
+
+        # Busca o clima
+        resultado = buscar_clima(cidade)
+
+        # Fala o resultado
+        falar(resultado)
+
+    # -------------------------
+    # ABRIR GITHUB
+    # -------------------------
+    elif "github" in comando:
+        falar("Abrindo seu GitHub, bons códigos!")
+
+        # Abre o site do GitHub
+        webbrowser.open("https://github.com/")
+
+    # -------------------------
+    # ABRIR YOUTUBE
+    # -------------------------
+    elif "abrir youtube" in comando:
+        falar("Abrindo YouTube.")
+
+        # Abre o YouTube no navegador
+        webbrowser.open("https://www.youtube.com/")
+
+        # Aguarda 2 segundos
+        time.sleep(2)
+
+    # -------------------------
+    # PESQUISAR VÍDEO NO YOUTUBE JÁ ABERTO
+    # -------------------------
+    elif "pesquisar vídeo" in comando or "procurar vídeo" in comando:
+        # Remove as palavras do comando e fica só com o nome do vídeo
+        video = (
+            comando.replace("pesquisar vídeo", "")
+                   .replace("procurar vídeo", "")
+                   .strip()
+        )
+
+        # Verifica se o usuário falou o vídeo
+        if video == "":
+            falar("Qual vídeo você quer pesquisar?")
+            return
+
+        # Pesquisa o vídeo no YouTube aberto
+        pesquisar_video_youtube(video)
+
+    # -------------------------
+    # TOCAR VÍDEO OU MÚSICA NO YOUTUBE
+    # -------------------------
+    elif "toque" in comando or "tocar música" in comando or "tocar musica" in comando:
+        # Remove as palavras de comando
+        musica = (
+            comando.replace("toque", "")
+                   .replace("tocar música", "")
+                   .replace("tocar musica", "")
+                   .strip()
+        )
+
+        # Verifica se o usuário falou o nome
+        if musica == "":
+            falar("Qual música ou vídeo você quer tocar?")
+            return
+
+        # Fala o que vai tocar
+        falar(f"Tocando {musica} no YouTube.")
+
+        # Abre automaticamente o primeiro resultado no YouTube
+        pywhatkit.playonyt(musica)
+
+    # -------------------------
+    # PESQUISAR NO GOOGLE
+    # -------------------------
+    elif "pesquise no google" in comando or "pesquisar no google" in comando:
+        # Remove as palavras do comando
+        pesquisa = (
+            comando.replace("pesquise no google", "")
+                   .replace("pesquisar no google", "")
+                   .strip()
+        )
+
+        # Verifica se existe algo para pesquisar
+        if pesquisa == "":
+            falar("O que você deseja pesquisar no Google?")
+            return
+
+        # Fala o que vai pesquisar
+        falar(f"Pesquisando {pesquisa} no Google.")
+
+        # Pesquisa no Google
+        pywhatkit.search(pesquisa)
+
+    # -------------------------
+    # PESQUISA RÁPIDA NO GOOGLE
+    # -------------------------
+    elif "google" in comando:
+        # Remove a palavra Google
+        pesquisa = comando.replace("google", "").strip()
+
+        # Verifica se existe texto para pesquisar
+        if pesquisa == "":
+            falar("O que você deseja pesquisar no Google?")
+            return
+
+        # Fala o que vai pesquisar
+        falar(f"Pesquisando {pesquisa}")
+
+        # Faz a pesquisa
+        pywhatkit.search(pesquisa)
+
+    # -------------------------
+    # ABRIR NOTÍCIAS
+    # -------------------------
+    elif "notícias" in comando or "noticias" in comando:
+        falar("Abrindo as últimas notícias para você.")
+
+        # Abre o site de notícias
+        webbrowser.open("https://g1.globo.com/")
+
+    # -------------------------
+    # ANOTAÇÕES
+    # -------------------------
+    elif "anote" in comando or "anotar" in comando:
+        # Remove as palavras de comando
+        nota = (
+            comando.replace("anote", "")
+                   .replace("anotar", "")
+                   .strip()
+        )
+
+        # Verifica se há algo para anotar
+        if nota == "":
+            falar("O que você quer que eu anote?")
+            return
+
+        # Abre ou cria o arquivo notas.txt e adiciona a anotação
+        with open("notas.txt", "a", encoding="utf-8") as f:
+            f.write(f"- {nota}\n")
+
+        # Confirma que anotou
+        falar("Anotei no seu bloco de notas.")
+
+    # -------------------------
+    # ABRIR UNITY
+    # -------------------------
+    elif "unity" in comando:
+        falar("Abrindo o Unity.")
+
+        try:
+            # Caminho do Unity Hub no Windows
+            os.startfile(r"C:\Program Files\Unity Hub\Unity Hub.exe")
+
+        except Exception:
+            # Caso o caminho não exista
+            falar("Não consegui achar o Unity.")
+
+    # -------------------------
+    # FECHAR JANELA ATUAL
+    # -------------------------
+    elif "fechar janela" in comando or "fechar isso" in comando or "fechar tela" in comando:
+        falar("Fechando a janela atual.")
+
+        # Simula ALT + F4
+        pyautogui.hotkey("alt", "f4")
+
+    # -------------------------
+    # FECHAR NAVEGADOR
+    # -------------------------
+    elif "fechar navegador" in comando or "fechar youtube" in comando:
+        falar("Fechando o navegador.")
+
+        # Fecha Chrome
+        os.system("taskkill /f /im chrome.exe")
+
+        # Fecha Microsoft Edge
+        os.system("taskkill /f /im msedge.exe")
+
+        # Fecha Firefox
+        os.system("taskkill /f /im firefox.exe")
+
+    # -------------------------
+    # FECHAR CHROME
+    # -------------------------
+    elif "fechar chrome" in comando or "fechar google chrome" in comando:
+        falar("Fechando o Google Chrome.")
+
+        # Encerra o processo do Chrome
+        os.system("taskkill /f /im chrome.exe")
+
+    # -------------------------
+    # FECHAR EDGE
+    # -------------------------
+    elif "fechar edge" in comando or "fechar microsoft edge" in comando:
+        falar("Fechando o Microsoft Edge.")
+
+        # Encerra o processo do Edge
+        os.system("taskkill /f /im msedge.exe")
+
+    # -------------------------
+    # SAIR
+    # -------------------------
+    elif "desligar" in comando or "sair" in comando:
+        falar("Encerrando sistemas. Até logo!")
+
+        # Encerra o programa
+        exit()
+
+    # -------------------------
+    # QUANDO O COMANDO NÃO FOR RECONHECIDO
+    # -------------------------
+    else:
+        # Se nenhum comando acima for reconhecido
+        falar("Desculpe, ainda não sei executar esse comando.")
+
+
+# Mensagem inicial da Alexandria
+falar("Alexandria online e pronta.")
+
+# Loop infinito que mantém a assistente sempre ativa
+while True:
+    executar_alexandria()
